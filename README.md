@@ -113,6 +113,8 @@ This starter kit can be used to submit to any of the tracks. You can find more i
 ## Where can I know more about the dataset schema ?
 The dataset schema is described in [docs/dataset.md](docs/dataset.md).
 
+If you want to use Croissant to view the data, please use [docs/croissant.json](docs/croissant.json).
+
 **Best of Luck** :tada: :tada:
 
 # 📎 Important links
