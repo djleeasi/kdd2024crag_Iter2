@@ -1,6 +1,6 @@
 # CRAG Baselines
 
-For the CRAG benchmark, we provide participants with two baseline models to help get started. Detailed implementations of these baseline models are accessible through the links provided below. Participants are encouraged to use these as a starting point for the competition.
+For the CRAG benchmark, we provide participants with three baseline models to help get started. Detailed implementations of these baseline models are accessible through the links provided below. Participants are encouraged to use these as a starting point for the competition.
 
 Please note that these baselines are **NOT** tuned for performance or efficiency, and are provided as is for demonstration.
 
@@ -10,6 +10,8 @@ Please note that these baselines are **NOT** tuned for performance or efficiency
 1. [**Vanilla Llama 3 Model**](../models/vanilla_llama_baseline.py): For an implementation guide and further details, refer to the Vanilla Llama 3 model inline documentation [here](../models/vanilla_llama_baseline.py).
 
 2. [**RAG Baseline Model**](../models/rag_llama_baseline.py): For an implementation guide and further details, refer to the RAG Baseline model inline documentation [here](../models/rag_llama_baseline.py).
+
+3. [**RAG Knowledge Graph Baseline Model**](../models/rag_knowledge_graph_baseline.py): For an implementation guide and further details, refer to the RAG Baseline model inline documentation [here](../models/rag_knowledge_graph_baseline.py).
 
 ## Preparing Your Submission:
 

@@ -104,7 +104,7 @@ You can find more details about the hardware and system configuration in [docs/h
 In summary, we provide you `4` x [[NVIDIA T4 GPUs](https://www.nvidia.com/en-us/data-center/tesla-t4/)].
 
 ## 🏁 Baseline
-We include two baselines for demonstration purposes, and you can read more abou them in [docs/baselines.md](docs/baselines.md).
+We include three baselines for demonstration purposes, and you can read more abou them in [docs/baselines.md](docs/baselines.md).
 
 # ❓ Frequently Asked Questions
 ## Which track is this starter kit for ?
