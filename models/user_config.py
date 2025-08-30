@@ -1,7 +1,8 @@
 # isort: skip_file
-from models.dummy_model import DummyModel
+# from models.dummy_model import DummyModel
+from models.vanilla_llama_baseline import InstructModel
 
-UserModel = DummyModel
+UserModel = InstructModel
 
 # Uncomment the lines below to use the Vanilla LLAMA baseline
 # from models.vanilla_llama_baseline import InstructModel 

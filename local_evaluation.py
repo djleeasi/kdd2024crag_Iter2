@@ -1,13 +1,22 @@
 import bz2
 import json
 import os
+import time
+import random
+
+import pandas as pd
+
 from datetime import datetime
 
 from loguru import logger
-from openai import APIConnectionError, OpenAI, RateLimitError
+from openai import APIConnectionError, OpenAI, RateLimitError, BadRequestError, APIError
 from prompts.templates import IN_CONTEXT_EXAMPLES, INSTRUCTIONS
 from tqdm.auto import tqdm
 from transformers import LlamaTokenizerFast
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 tokenizer = LlamaTokenizerFast.from_pretrained("tokenizer")
 
@@ -24,22 +33,58 @@ def get_system_message():
     return INSTRUCTIONS + IN_CONTEXT_EXAMPLES
 
 
-def attempt_api_call(client, model_name, messages, max_retries=10):
-    """Attempt an API call with retries upon encountering specific errors."""
-    # todo: add default response when all efforts fail
-    for attempt in range(max_retries):
+
+
+def attempt_api_call(client, model_name, messages, *, want_json=True,
+                     use_reasoning=True, max_retries=10):
+    """
+    Responses API version that supports GPT-5 reasoning + strict JSON.
+    - messages: same list you used before ([{"role":"system"/"user"/"assistant", ...}, ...])
+    - want_json: enforce JSON output using a schema
+    - use_reasoning: set minimal reasoning effort for GPT-5 models
+    """
+    # Strict JSON via JSON Schema (more reliable than {type:"json_object"})
+    # If you know the exact schema, put it in here.
+    text_cfg = None
+    if want_json:
+        text_cfg = {
+            "format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "generic_json",
+                    "strict": True,
+                    "schema": {"type": "object"}  # relax or replace with your real schema
+                }
+            }
+        }
+
+    # Minimal reasoning keeps latency/price low
+    reasoning_cfg = {"effort": "minimal"} if use_reasoning else None
+
+    backoff = 1.0
+    for attempt in range(1, max_retries + 1):
         try:
-            response = client.chat.completions.create(
+            resp = client.responses.create(
                 model=model_name,
-                messages=messages,
-                response_format={"type": "json_object"},
+                input=messages,                 # Responses API accepts chat-style messages
+                reasoning=reasoning_cfg,        # Ignored by models that don't support it
+                text=text_cfg,                  # Structured JSON output
+                # max_output_tokens=max_output_tokens,
+                store=False                     # Don’t persist to reduce bill/overhead
             )
-            return response.choices[0].message.content
-        except (APIConnectionError, RateLimitError):
-            logger.warning(f"API call failed on attempt {attempt + 1}, retrying...")
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            break
+            return resp.output_text            # Handy helper with the assistant’s text
+        except BadRequestError as e:
+            # Some non-reasoning models may reject the 'reasoning' field — fall back once
+            if use_reasoning:
+                logger.warning("Model rejected 'reasoning'; retrying without it once. %s", e)
+                use_reasoning = False
+                reasoning_cfg = None
+                continue
+            raise
+        except (APIConnectionError, RateLimitError, APIError) as e:
+            logger.warning(f"API call failed on attempt {attempt}: {e}; backing off…")
+            time.sleep(backoff * (1 + 0.25 * random.random()))
+            backoff = min(backoff * 2, 16)
     return None
 
 
@@ -104,13 +149,13 @@ def load_data_in_batches(dataset_path, batch_size):
             batch = initialize_batch()
             for line in file:
                 try:
-                    item = json.loads(line)
-                    for key in batch:
-                        batch[key].append(item[key])
-                    
-                    if len(batch["query"]) == batch_size:
-                        yield batch
-                        batch = initialize_batch()
+                    item = json.loads(line) # list of dictionaries, each being a question
+                    for case in item:
+                        for key in batch:
+                            batch[key].append(case[key])
+                        if len(batch["query"]) == batch_size:
+                            yield batch
+                            batch = initialize_batch()
                 except json.JSONDecodeError:
                     logger.warn("Warning: Failed to decode a line.")
             # Yield any remaining data as the last batch
@@ -205,17 +250,37 @@ def evaluate_predictions(queries, ground_truths, predictions, evaluation_model_n
 
 
 if __name__ == "__main__":
+    import sys
     from models.user_config import UserModel
 
-    DATASET_PATH = "example_data/dev_data.jsonl.bz2"
+    DATASET_PATH = "/workspace/data/6b358135-18eb-4ef1-b4c2-aa2f4e987453_crag_task_1_v0.json.bz2"
     EVALUATION_MODEL_NAME = os.getenv("EVALUATION_MODEL_NAME", "gpt-4-0125-preview")
+
+    if os.getenv("RUN_FLAG") == "test":
+        # for batch in tqdm(load_data_in_batches(DATASET_PATH, 10), desc="Testing Batches"):
+        #     batch_ground_truths = batch.pop("answer")  # Remove answers from batch and store them
+        sys.exit(0)
 
     # Generate predictions
     participant_model = UserModel()
     queries, ground_truths, predictions = generate_predictions(DATASET_PATH, participant_model)
-    
+
+    # Save
+    df = pd.DataFrame({
+    "query": queries,
+    "ground_truth": ground_truths,
+    "prediction": predictions
+    })
+
+    # Save as CSV
+    df.to_csv("results.csv", index=False)
+
     # Evaluate Predictions
-    openai_client = OpenAI()
+    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     evaluation_results = evaluate_predictions(
         queries, ground_truths, predictions, EVALUATION_MODEL_NAME, openai_client
     )
+
+    with open("results.txt", "w") as f:
+        json.dump(evaluation_results, f, indent=4)
+

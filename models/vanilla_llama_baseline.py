@@ -32,6 +32,7 @@ from models.utils import trim_predictions_to_max_token_length
 # for more information on the MockAPI.
 #
 # **Note**: This environment variable will not be available for Task 1 evaluations.
+WEIGHT_DIRECTORY = "/workspace/weight"
 CRAG_MOCK_API_URL = os.getenv("CRAG_MOCK_API_URL", "http://localhost:8000")
 
 
@@ -41,7 +42,7 @@ CRAG_MOCK_API_URL = os.getenv("CRAG_MOCK_API_URL", "http://localhost:8000")
 AICROWD_SUBMISSION_BATCH_SIZE = 8 # TUNE THIS VARIABLE depending on the number of GPUs you are requesting and the size of your model.
 
 # VLLM Parameters 
-VLLM_TENSOR_PARALLEL_SIZE = 4 # TUNE THIS VARIABLE depending on the number of GPUs you are requesting and the size of your model.
+VLLM_TENSOR_PARALLEL_SIZE = 1 # TUNE THIS VARIABLE depending on the number of GPUs you are requesting and the size of your model.
 VLLM_GPU_MEMORY_UTILIZATION = 0.85 # TUNE THIS VARIABLE depending on the number of GPUs you are requesting and the size of your model.
 
 #### CONFIG PARAMETERS END---
@@ -57,13 +58,13 @@ class InstructModel:
 
     def initialize_models(self):
         # Initialize Meta Llama 3 - 8B Instruct Model
-        self.model_name = "models/meta-llama/Meta-Llama-3-8B-Instruct"
-
-        if not os.path.exists(self.model_name):
+        self.model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        self.model_path = os.path.join(WEIGHT_DIRECTORY, "models", self.model_name, )
+        if not os.path.exists(self.model_path):
             raise Exception(
                 f"""
             The evaluators expect the model weights to be checked into the repository,
-            but we could not find the model weights at {self.model_name}
+            but we could not find the model weights at {self.model_path}
             
             Please follow the instructions in the docs below to download and check in the model weights.
             
@@ -73,7 +74,7 @@ class InstructModel:
 
         # initialize the model with vllm
         self.llm = vllm.LLM(
-            self.model_name,
+            self.model_path,
             worker_use_ray=True,
             tensor_parallel_size=VLLM_TENSOR_PARALLEL_SIZE, 
             gpu_memory_utilization=VLLM_GPU_MEMORY_UTILIZATION, 
