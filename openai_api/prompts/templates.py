@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pydantic import BaseModel
 
 INSTRUCTIONS = """
 # Task: 
@@ -27,3 +28,13 @@ Ground truth: ["Jim Parsons", "Iain Armitage"]
 Prediction: I am sorry I don't know.
 Accuracy: False
 """
+
+EXAMPLE_TRIPLE = [
+    "who has had more number one hits on the us billboard rock songs chart, imagine dragons or twenty one pilots?",
+    "imagine dragons have had more number one hits on the us billboard rock songs chart than twenty one pilots, with 5 number one hits compared to twenty one pilots' 4.",
+    "According to Billboard, Imagine Dragons have had 4 number one hits on the US Billboard Rock Songs chart, while Twenty One Pilots have had 2.",
+]
+
+
+class EvalScheme(BaseModel):
+    accuracy: bool

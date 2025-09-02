@@ -1,4 +1,5 @@
-httpx==0.27.2 #OpenAI compatibility
+# works at python 3.10
+httpx
 accelerate
 beautifulsoup4
 bitsandbytes
@@ -7,8 +8,9 @@ hf-transfer
 huggingface-hub
 loguru
 lxml
-openai==1.13.3
+openai
 sentence_transformers
 torch
 transformers
-vllm>=0.4.2
+vllm
+pandas
